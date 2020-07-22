@@ -1,0 +1,86 @@
+#
+# This is a Shiny web application. You can run the application by clicking
+# the 'Run App' button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    http://shiny.rstudio.com/
+#
+
+library(shiny)
+library(shinydashboard)
+library(shinyjs)
+library(shinyWidgets)
+library(Quandl)
+library(plotly)
+library(plyr)
+library(data.table)
+
+# Define UI for application that draws a histogram
+ui <- fluidPage(
+
+    # Application title
+    titlePanel("Macroeconomic Dashboard"),
+
+    # Sidebar with a slider input for number of bins 
+    sidebarLayout(
+        inputPanel(
+            dateRangeInput("dateRange",
+                           label = 'Date Range',
+                           start = '2007-01-01', end = Sys.Date()
+            )
+        ),
+        
+
+        # Show a plot of the generated distribution
+        mainPanel(
+            
+            # Output: Tabset w/ plot, summary, and table ----
+            tabsetPanel(type = "tabs",
+                        tabPanel("Economy",
+                                 plotlyOutput(outputId = "UNRATE"),
+                                 plotlyOutput(outputId = "CPIAUCSL"),
+                                 plotlyOutput(outputId = "DGS10"),
+                                 plotlyOutput(outputId = "ICSA"),
+                                 ),
+                        tabPanel("Consumer", 
+                                 plotlyOutput(outputId = "HOUST")),
+                        tabPanel("Stock Market",
+                                 plotlyOutput(outputId = "DPRIME"))
+            )
+        )
+    )
+)
+
+# Define server logic required to draw a histogram
+server <- function(input, output) {
+
+    
+    Quandl.api_key('DVn9x3DeYnxxb2fqsshu')
+
+    
+    FRED_Table<-reactive({
+                as.data.table(Quandl(c('FRED/UNRATE','FRED/HOUST','FRED/DPRIME',
+                                       'FRED/CPIAUCSL','FRED/DGS10','FRED/ICSA'
+                                       
+                                       
+                                       
+                                       ),collapse="monthly",
+                start_date=input$dateRange[1], end_date=input$dateRange[2])) %>%
+                setnames(.,c("Date","UNRATE","HOUST","DPRIME",
+                             'CPIAUCSL','DGS10','ICSA'))
+                })
+    
+
+    output$UNRATE<-renderPlotly({plot_ly(FRED_Table(),x=~Date,y=~UNRATE,type='scatter',mode='lines')})
+    output$HOUST<-renderPlotly({plot_ly(FRED_Table(),x=~Date,y=~HOUST,type='scatter',mode='lines')})
+    output$DPRIME<-renderPlotly({plot_ly(FRED_Table(),x=~Date,y=~DPRIME,type='scatter',mode='lines')})
+    output$CPIAUCSL<-renderPlotly({plot_ly(FRED_Table(),x=~Date,y=~CPIAUCSL,type='scatter',mode='lines')})
+    output$DGS10<-renderPlotly({plot_ly(FRED_Table(),x=~Date,y=~DGS10,type='scatter',mode='lines')})
+    output$ICSA<-renderPlotly({plot_ly(FRED_Table(),x=~Date,y=~ICSA,type='scatter',mode='lines')})
+     
+    
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
